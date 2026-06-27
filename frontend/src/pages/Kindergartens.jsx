@@ -1,15 +1,52 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { MapContainer, TileLayer, Polygon, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Popup, useMap } from 'react-leaflet';
 import axios from 'axios';
 import { AuthContext } from '../App';
 
-// Componente para capturar clics en el mapa
-function MapClickHandler({ onMapClick }) {
-  useMapEvents({
-    click(e) {
-      onMapClick([e.latlng.lat, e.latlng.lng]);
-    }
-  });
+import 'leaflet/dist/leaflet.css';
+import '@geoman-io/leaflet-geoman-free';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+
+// Componente para manejar controles Geoman en Leaflet
+function GeomanControls({ setDraftPolygon, isDirector }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.pm.addControls({
+      position: 'topleft',
+      drawMarker: false,
+      drawCircleMarker: false,
+      drawPolyline: false,
+      drawRectangle: false,
+      drawPolygon: true,
+      drawCircle: false,
+      editMode: true,
+      dragMode: false,
+      cutPolygon: false,
+      removalMode: true,
+    });
+
+    // Eventos
+    map.on('pm:create', (e) => {
+      const layer = e.layer;
+      const latlngs = layer.getLatLngs()[0];
+      const coords = latlngs.map(ll => [ll.lng, ll.lat]);
+      coords.push([latlngs[0].lng, latlngs[0].lat]);
+      setDraftPolygon(coords);
+    });
+
+    map.on('pm:remove', (e) => {
+      setDraftPolygon(null);
+    });
+
+    // Cleanup controls when unmounting
+    return () => {
+      map.pm.removeControls();
+      map.off('pm:create');
+      map.off('pm:remove');
+    };
+  }, [map, setDraftPolygon]);
+
   return null;
 }
 
@@ -18,10 +55,10 @@ export default function Kindergartens() {
   const [kindergartens, setKindergartens] = useState([]);
   const [name, setName] = useState('');
   const [buffer, setBuffer] = useState(10.0);
-  const [draftVertices, setDraftVertices] = useState([]);
+  const [draftPolygon, setDraftPolygon] = useState(null); // Will store GeoJSON coordinates
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
+  
   const isDirector = role === 'director';
 
   const fetchKindergartens = async () => {
@@ -43,12 +80,8 @@ export default function Kindergartens() {
     fetchKindergartens();
   }, []);
 
-  const handleMapClick = (latlng) => {
-    setDraftVertices(prev => [...prev, latlng]);
-  };
-
   const handleClearDraft = () => {
-    setDraftVertices([]);
+    setDraftPolygon(null);
     if (!isDirector) {
       setName('');
     }
@@ -60,20 +93,17 @@ export default function Kindergartens() {
     setError('');
     setSuccess('');
 
-    if (draftVertices.length < 3) {
-      setError('Debes marcar al menos 3 puntos en el mapa para formar un polígono.');
+    if (!draftPolygon) {
+      setError('Debes dibujar un polígono en el mapa usando la herramienta lateral.');
       return;
     }
 
     try {
-      const formattedCoordinates = draftVertices.map(v => [v[1], v[0]]);
-      formattedCoordinates.push([draftVertices[0][1], draftVertices[0][0]]); // Cerrar anillo
-
       const payload = {
         name,
         geometry: {
           type: 'Polygon',
-          coordinates: [formattedCoordinates]
+          coordinates: [draftPolygon]
         },
         buffer_meters: Number(buffer)
       };
@@ -112,7 +142,7 @@ export default function Kindergartens() {
       <div className="glass-panel" style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ position: 'absolute', top: '10px', left: '50px', zIndex: '1000', pointerEvents: 'none' }}>
           <div className="glass-panel" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', color: 'white', background: 'rgba(10, 14, 26, 0.85)' }}>
-            📍 Haz clics en el mapa para {isDirector ? 'rediseñar los límites' : 'trazar el polígono'}. Mínimo 3 puntos.
+            📍 Usa las herramientas de la izquierda para {isDirector ? 'rediseñar los límites' : 'trazar el polígono'}.
           </div>
         </div>
 
@@ -128,10 +158,12 @@ export default function Kindergartens() {
               ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
               : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"}
           />
-          <MapClickHandler onMapClick={handleMapClick} />
+
+          <GeomanControls setDraftPolygon={setDraftPolygon} isDirector={isDirector} />
 
           {/* Polígonos Guardados */}
           {kindergartens.map(k => {
+            if (!k.geometry || !k.geometry.coordinates || k.geometry.coordinates.length === 0) return null;
             const positions = k.geometry.coordinates[0].map(pt => [pt[1], pt[0]]);
             return (
               <Polygon 
@@ -147,26 +179,14 @@ export default function Kindergartens() {
             );
           })}
 
-          {/* Polígono en dibujo (Borrador) */}
-          {draftVertices.length > 0 && (
-            <Polygon 
-              positions={draftVertices} 
-              pathOptions={{ color: 'var(--accent-primary)', dashArray: '5, 5', fillColor: 'var(--accent-primary)', fillOpacity: 0.2 }}
-            />
-          )}
-
-          {/* Pines de los puntos del borrador */}
-          {draftVertices.map((vertex, idx) => (
-            <Marker key={idx} position={vertex} />
-          ))}
         </MapContainer>
       </div>
 
       {/* Formulario y listado */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '100%', overflowY: 'auto', paddingRight: '4px' }}>
         
         {/* Trazador / Formulario de Registro */}
-        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', flexShrink: 0 }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--accent-primary)' }}>
             {isDirector ? 'Rediseñar Límites de la Unidad' : 'Trazar Nueva Área'}
           </h3>
@@ -183,13 +203,12 @@ export default function Kindergartens() {
                 value={name} 
                 onChange={(e) => setName(e.target.value)} 
                 placeholder="ej. Kínder Rayito de Sol" 
-                disabled={isDirector}
                 required 
               />
             </div>
             
             <div className="form-group">
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Margen de Alerta (Metros)</label>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Margen de Tolerancia GPS (Metros)</label>
               <input 
                 type="number" 
                 className="form-control" 
@@ -201,8 +220,8 @@ export default function Kindergartens() {
               />
             </div>
 
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Puntos marcados: <strong>{draftVertices.length}</strong>
+            <div style={{ fontSize: '0.8rem', color: draftPolygon ? 'var(--success)' : 'var(--warning)' }}>
+              Estado del Trazado: <strong>{draftPolygon ? 'Completado' : 'Pendiente (Dibuja en el mapa)'}</strong>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
@@ -217,11 +236,11 @@ export default function Kindergartens() {
         </div>
 
         {/* Listado de Áreas */}
-        <div className="glass-panel" style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
+        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', flexShrink: 0 }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--accent-secondary)' }}>
             {isDirector ? 'Mi Unidad Educativa' : 'Áreas Registradas'}
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {kindergartens.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem 0', fontSize: '0.85rem' }}>
                 No hay áreas registradas.

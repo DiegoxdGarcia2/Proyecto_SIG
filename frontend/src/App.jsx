@@ -6,6 +6,8 @@ import 'leaflet/dist/leaflet.css';
 // Contexto de Autenticación, Tema y Layout SaaS
 export const AuthContext = createContext(null);
 
+import { WebSocketProvider } from './context/WebSocketContext';
+
 // Páginas y Componentes
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -112,35 +114,37 @@ export default function App() {
       theme, toggleTheme, 
       sidebarCollapsed, toggleSidebar 
     }}>
-      <Router>
-        <Routes>
-          <Route 
-            path="/login" 
-            element={token ? <Navigate to="/dashboard" replace /> : <Login />} 
-          />
-          <Route 
-            path="/dashboard" 
-            element={<ProtectedRoute><Dashboard /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/kindergartens" 
-            element={<ProtectedRoute><Kindergartens /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/tutors" 
-            element={<ProtectedRoute><Tutors /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/children" 
-            element={<ProtectedRoute><Children /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/logs" 
-            element={<ProtectedRoute><Logs /></ProtectedRoute>} 
-          />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Router>
+      <WebSocketProvider>
+        <Router>
+          <Routes>
+            <Route 
+              path="/login" 
+              element={token ? <Navigate to="/dashboard" replace /> : <Login />} 
+            />
+            <Route 
+              path="/dashboard" 
+              element={<ProtectedRoute><Dashboard /></ProtectedRoute>} 
+            />
+            <Route 
+              path="/kindergartens" 
+              element={<ProtectedRoute><Kindergartens /></ProtectedRoute>} 
+            />
+            <Route 
+              path="/tutors" 
+              element={<ProtectedRoute><Tutors /></ProtectedRoute>} 
+            />
+            <Route 
+              path="/children" 
+              element={<ProtectedRoute><Children /></ProtectedRoute>} 
+            />
+            <Route 
+              path="/logs" 
+              element={<ProtectedRoute><Logs /></ProtectedRoute>} 
+            />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Router>
+      </WebSocketProvider>
     </AuthContext.Provider>
   );
 }
