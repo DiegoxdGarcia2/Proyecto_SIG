@@ -66,7 +66,8 @@ def _evaluate_and_update_status(
         "tutor_id": tutor_id,
         "location": location.model_dump(),
         "status": current_status,
-        "timestamp": now
+        "timestamp": now,
+        "company_id": kinder.get("company_id")
     })
     return current_status, is_safe, now
 
@@ -142,6 +143,22 @@ async def update_tracking(
         payload.device_id, payload.tutor_id, payload.location, kinder, db
     )
     
+    # Notificar al panel administrativo en tiempo real (SaaS Multi-Tenant)
+    company_id = kinder.get("company_id")
+    if company_id:
+        from app.api.websockets import manager as ws_manager
+        await ws_manager.broadcast_to_admins(company_id, {
+            "event": "LOCATION_UPDATE",
+            "device_id": payload.device_id,
+            "child_name": child.get("name", "Niño"),
+            "location": payload.location.model_dump(),
+            "status": status_str,
+            "is_safe": is_safe,
+            "timestamp": now.isoformat(),
+            "kindergarten_id": child.get("kindergarten_id"),
+            "classroom_id": child.get("classroom_id")
+        })
+    
     if not is_safe:
         alert_payload = {
             "event": "ALARM",
@@ -150,15 +167,20 @@ async def update_tracking(
             "message": f"¡ALERTA! El niño '{child.get('name', 'Niño')}' ha salido del perímetro del Kinder.",
             "timestamp": now.isoformat()
         }
-        from app.api.websockets import manager
-        await manager.send_personal_alert(payload.tutor_id, alert_payload)
         
-        background_tasks.add_task(
-            _send_fcm_alert_background, 
-            payload.tutor_id, 
-            child.get("name", "Niño"), 
-            db
-        )
+        t_ids = child.get("tutor_ids", [])
+        if not t_ids and child.get("tutor_id"):
+            t_ids = [child["tutor_id"]]
+            
+        from app.api.websockets import manager as ws_manager
+        for t_id in t_ids:
+            await ws_manager.send_personal_alert(t_id, alert_payload)
+            background_tasks.add_task(
+                _send_fcm_alert_background, 
+                t_id, 
+                child.get("name", "Niño"), 
+                db
+            )
         
     return {
         "device_id": payload.device_id,
