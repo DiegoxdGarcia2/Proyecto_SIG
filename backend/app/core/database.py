@@ -89,11 +89,15 @@ class MockCollection:
                                 val = val.replace(tzinfo=comp.tzinfo)
                         if val > comp:
                             return False
-                else:
-                    if doc.get(k) != v:
+            else:
+                doc_val = doc.get(k)
+                # Emular comportamiento MongoDB: si el campo es un array,
+                # verificar si el valor escalar está contenido en el array.
+                if isinstance(doc_val, list):
+                    if v not in doc_val:
                         return False
-            elif doc.get(k) != v:
-                return False
+                elif doc_val != v:
+                    return False
         return True
 
     def find(self, query=None):

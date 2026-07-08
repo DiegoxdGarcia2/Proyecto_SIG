@@ -9,6 +9,7 @@ import logging
 
 from app.core.database import get_db
 from app.api.websockets import manager as ws_manager
+from app.core.firebase_config import send_push_notification
 
 logger = logging.getLogger("tracking")
 router = APIRouter(tags=["Tracking"])
@@ -153,6 +154,18 @@ async def _handle_exit(
 
     for tid in tutor_ids:
         await ws_manager.send_personal_alert(tid, alert_msg)
+        try:
+            from bson import ObjectId
+            tutor = db.users.find_one({"_id": ObjectId(tid)})
+            if tutor and tutor.get("fcm_token"):
+                send_push_notification(
+                    fcm_token=tutor["fcm_token"],
+                    title="🚨 Alerta de Seguridad",
+                    body=f"El estudiante '{child_name}' salió del perímetro seguro.",
+                    data={"child_id": child_id, "event": "GEOFENCE_EXIT"}
+                )
+        except Exception as e:
+            logger.error(f"Error enviando Push a tutor {tid}: {e}")
 
     await ws_manager.broadcast_to_admins(company_id, alert_msg)
 
@@ -186,6 +199,18 @@ async def _handle_enter(
 
     for tid in tutor_ids:
         await ws_manager.send_personal_alert(tid, alert_msg)
+        try:
+            from bson import ObjectId
+            tutor = db.users.find_one({"_id": ObjectId(tid)})
+            if tutor and tutor.get("fcm_token"):
+                send_push_notification(
+                    fcm_token=tutor["fcm_token"],
+                    title="✅ Retorno Seguro",
+                    body=f"El estudiante '{child_name}' ha regresado al área.",
+                    data={"child_id": child_id, "event": "GEOFENCE_ENTER"}
+                )
+        except Exception as e:
+            logger.error(f"Error enviando Push a tutor {tid}: {e}")
 
     await ws_manager.broadcast_to_admins(company_id, alert_msg)
 

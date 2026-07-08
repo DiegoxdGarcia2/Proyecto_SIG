@@ -57,6 +57,57 @@ export const WebSocketProvider = ({ children }) => {
     };
   }, [token, role, username, companyId]);
 
+  // Polling de fallback: consulta estado de los niños cada 3 segundos.
+  // Detecta transiciones SAFE → OUTSIDE para generar notificaciones en la campana.
+  useEffect(() => {
+    if (!token) return;
+
+    const childUrl = role === 'tutor' ? '/tutor/children' : '/children';
+    const prevStatusRef = {};
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const apiBase = isLocal ? 'http://localhost:8000/api/v1' : 'https://backend-6161081745.us-central1.run.app/api/v1';
+        const res = await fetch(`${apiBase}${childUrl}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        data.forEach(child => {
+          const prevStatus = prevStatusRef[child.id];
+          if (prevStatus === 'SAFE' && child.status === 'OUTSIDE') {
+            const notif = {
+              type: 'ALERT',
+              event: 'GEOFENCE_EXIT',
+              child_name: child.name,
+              message: `¡${child.name} ha salido del área segura!`,
+              timestamp: new Date().toISOString()
+            };
+            addAlert(notif);
+            addNotification(notif);
+          } else if (prevStatus === 'OUTSIDE' && child.status === 'SAFE') {
+            const notif = {
+              type: 'INFO',
+              event: 'GEOFENCE_ENTER',
+              child_name: child.name,
+              message: `${child.name} ha vuelto al área segura.`,
+              timestamp: new Date().toISOString()
+            };
+            addAlert(notif);
+            addNotification(notif);
+          }
+          prevStatusRef[child.id] = child.status;
+        });
+      } catch (err) {
+        // Silenciar errores de polling
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [token, role]);
+
   const addAlert = (alertData) => {
     const id = Date.now();
     setAlerts(prev => [...prev, { ...alertData, id }]);

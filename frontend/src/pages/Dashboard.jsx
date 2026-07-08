@@ -77,6 +77,48 @@ export default function Dashboard() {
     }
   }, [childrenList, isTutor, selectedChildId]);
 
+  // 2.5 Polling: consulta el estado real de los niños cada 3 segundos.
+  // Cloud Run puede enrutar WebSockets y POSTs a instancias distintas,
+  // así que el polling garantiza actualización en tiempo real sin depender del WS.
+  useEffect(() => {
+    const savedToken = token || localStorage.getItem('admin_token');
+    if (!savedToken) return;
+
+    const config = { headers: { Authorization: `Bearer ${savedToken}` } };
+    const childUrl = isTutor ? '/tutor/children' : '/children';
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await axios.get(childUrl, config);
+        const freshChildren = {};
+        res.data.forEach(c => {
+          if (c.device_id) freshChildren[c.device_id] = c;
+        });
+
+        // Detectar transiciones de estado para generar alertas automáticas
+        setChildren(prev => {
+          Object.values(freshChildren).forEach(fc => {
+            const old = prev[fc.device_id];
+            if (old && old.status === 'SAFE' && fc.status === 'OUTSIDE') {
+              const newAlert = {
+                id: Date.now() + Math.random(),
+                childName: fc.name,
+                timestamp: new Date().toLocaleTimeString(),
+                message: `¡El estudiante '${fc.name}' ha cruzado el perímetro de seguridad!`
+              };
+              setAlerts(a => [newAlert, ...a].slice(0, 10));
+            }
+          });
+          return freshChildren;
+        });
+      } catch (err) {
+        // Silenciar errores de polling para no saturar la consola
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [token, isTutor]);
+
   // 3. Configurar WebSocket para tiempo real
   useEffect(() => {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -114,7 +156,7 @@ export default function Dashboard() {
             
             const child = prev[targetDeviceId];
             const newLocation = data.location || child.current_location;
-            const newStatus = data.type === 'ALERT' ? 'ALARM' : (data.type === 'INFO' ? 'SAFE' : (data.status || child.status));
+            const newStatus = data.type === 'ALERT' ? 'OUTSIDE' : (data.type === 'INFO' ? 'SAFE' : (data.status || child.status));
 
             return {
               ...prev,
@@ -128,7 +170,7 @@ export default function Dashboard() {
           });
 
           // Si es alerta de salida (ALERT) o evento de alarma
-          if (data.type === 'ALERT' || data.status === 'ALARM') {
+          if (data.type === 'ALERT' || data.status === 'OUTSIDE') {
             const childName = data.child_name || "Estudiante";
             const newAlert = {
               id: Date.now(),
@@ -156,7 +198,7 @@ export default function Dashboard() {
 
   // Icono interactivo Leaflet
   const createDivIcon = (name, status) => {
-    const isAlarm = status === 'ALARM';
+    const isAlarm = status === 'OUTSIDE';
     return L.divIcon({
       className: 'custom-gps-marker',
       html: `
@@ -583,7 +625,7 @@ export default function Dashboard() {
                 <Popup>
                   <div style={{ color: '#0a0e1a' }}>
                     <strong style={{ fontSize: '1rem' }}>{c.name}</strong><br/>
-                    Estatus: <span style={{ fontWeight: 'bold', color: c.status === 'ALARM' ? 'var(--danger)' : 'var(--success)' }}>{c.status}</span><br/>
+                    Estatus: <span style={{ fontWeight: 'bold', color: c.status === 'OUTSIDE' ? 'var(--danger)' : 'var(--success)' }}>{c.status}</span><br/>
                     Edad: {c.age} años<br/>
                     Dispositivo: {c.device_id || 'N/A'}<br/>
                     Última actualización: {c.last_updated ? new Date(c.last_updated).toLocaleTimeString() : 'N/A'}
@@ -638,7 +680,7 @@ export default function Dashboard() {
               activeChildrenList.map(c => (
                 <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderBottom: '1px solid var(--glass-border)' }}>
                   <span style={{ fontSize: '0.85rem' }}>{c.name}</span>
-                  <span className={`badge ${c.status === 'ALARM' ? 'badge-alarm' : 'badge-safe'}`} style={{ fontSize: '0.7rem' }}>
+                  <span className={`badge ${c.status === 'OUTSIDE' ? 'badge-alarm' : 'badge-safe'}`} style={{ fontSize: '0.7rem' }}>
                     {c.status}
                   </span>
                 </div>

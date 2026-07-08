@@ -63,8 +63,8 @@ export const ChildSelectorScreen: React.FC = () => {
     <TouchableOpacity style={styles.card} onPress={() => handleSelect(item)}>
       <View style={styles.cardHeader}>
         <Text style={styles.childName}>{item.name}</Text>
-        <Text style={[styles.badge, item.status === "ALARM" ? styles.badgeAlarm : styles.badgeSafe]}>
-          {item.status === "ALARM" ? "FUERA" : "SEGURO"}
+        <Text style={[styles.badge, item.status === "OUTSIDE" ? styles.badgeAlarm : styles.badgeSafe]}>
+          {item.status === "OUTSIDE" ? "FUERA" : "SEGURO"}
         </Text>
       </View>
       <Text style={styles.childInfo}>Edad: {item.age} años</Text>

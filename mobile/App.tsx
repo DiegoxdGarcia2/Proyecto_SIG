@@ -173,8 +173,8 @@ function AppContent() {
     return <LoginScreen />;
   }
 
-  // Si no ha seleccionado niño y es Tutor o Profesor (que simula o visualiza a sus alumnos)
-  if (!selectedChild && role === "tutor") {
+  // Si no ha seleccionado niño, mostrar el selector para TODOS los roles
+  if (!selectedChild) {
     return <ChildSelectorScreen />;
   }
 
@@ -238,7 +238,7 @@ function AppContent() {
           </View>
         ) : (
           // El profesor o admin ven directamente el simulador para hacer pruebas de notificaciones y geofencing
-          <SimulatorScreen onBackToSelector={logout} />
+          <SimulatorScreen onBackToSelector={() => selectChild(null)} />
         )}
       </View>
     </SafeAreaView>
