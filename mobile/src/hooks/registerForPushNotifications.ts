@@ -4,48 +4,59 @@ import { Platform } from "react-native";
 import { getApiUrl } from "../utils/api";
 
 // Configurar cómo se comportan las notificaciones cuando la app está activa
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+} catch (e) {
+  console.warn("expo-notifications no es compatible con el entorno actual (ej. Expo Go):", e);
+}
 
 export async function registerForPushNotificationsAsync(tutorId: string): Promise<string | null> {
-  if (!Device.isDevice) {
-    console.log("Debe usar un dispositivo físico para las notificaciones push.");
-    return null;
-  }
-
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
-  if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== "granted") {
-    console.log("¡Permiso de notificaciones push denegado!");
-    return null;
-  }
-
-  // Configuración específica de canales para Android (sonidos, vibraciones, etc.)
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF231F77",
-    });
-  }
-
   try {
-    // Obtener el token FCM nativo del dispositivo
-    const tokenData = await Notifications.getDevicePushTokenAsync();
+    if (!Device.isDevice) {
+      console.log("Debe usar un dispositivo físico para las notificaciones push.");
+      return null;
+    }
+
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== "granted") {
+      console.log("¡Permiso de notificaciones push denegado!");
+      return null;
+    }
+
+    // Configuración específica de canales para Android (sonidos, vibraciones, etc.)
+    if (Platform.OS === "android") {
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#FF231F77",
+      });
+    }
+
+    // Obtener el token FCM nativo del dispositivo (puede fallar en Expo Go)
+    let tokenData;
+    try {
+      tokenData = await Notifications.getDevicePushTokenAsync();
+    } catch (pushErr: any) {
+      console.warn("No se pudo obtener el token Push nativo. Esto es normal en Expo Go SDK 53+:", pushErr.message);
+      return null;
+    }
+
     const token = tokenData.data;
 
     // Enviar el token al backend FastAPI
@@ -67,8 +78,8 @@ export async function registerForPushNotificationsAsync(tutorId: string): Promis
     }
 
     return token;
-  } catch (error) {
-    console.error("Error al obtener o registrar el token de notificaciones:", error);
+  } catch (error: any) {
+    console.error("Error general en el registro de notificaciones push:", error.message);
     return null;
   }
 }
