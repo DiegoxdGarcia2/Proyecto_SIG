@@ -19,6 +19,7 @@ def serialize_child(c: dict) -> dict:
         "tutor_ids": c.get("tutor_ids", []),
         "status": c.get("status", "SAFE"),
         "company_id": c["company_id"],
+        "current_location": c.get("current_location"),
         "last_updated": c.get("last_updated")
     }
 

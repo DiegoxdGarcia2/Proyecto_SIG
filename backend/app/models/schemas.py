@@ -161,6 +161,8 @@ class ChildOut(BaseModel):
     classroom_id: Optional[str] = None
     tutor_ids: List[str] = []
     status: str
+    current_location: Optional[PointModel] = None
+    last_updated: Optional[datetime] = None
 
 class DeviceAssign(BaseModel):
     device_id: str = Field(..., min_length=1)

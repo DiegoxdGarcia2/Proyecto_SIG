@@ -98,11 +98,15 @@ export default function App() {
   const ProtectedRoute = ({ children }) => {
     if (!token) return <Navigate to="/login" replace />;
     return (
-      <div className="app-container">
+      <div className="app-container" style={{ position: 'relative' }}>
         <Sidebar />
-        <div className="main-content">
-          <Navbar />
-          {children}
+        <div className="main-content" style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+          <div style={{ position: 'relative', zIndex: 9999 }}>
+            <Navbar />
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', position: 'relative', zIndex: 1 }}>
+            {children}
+          </div>
         </div>
       </div>
     );

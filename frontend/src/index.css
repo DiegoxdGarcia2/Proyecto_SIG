@@ -287,7 +287,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  z-index: 9999;
+  z-index: 99999; /* z-index superior a Leaflet y otros elementos */
 }
 
 .toast-notification {
@@ -304,6 +304,7 @@ body {
   max-width: 400px;
   animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   border-left: 4px solid var(--accent-primary);
+  z-index: 99999;
 }
 
 .toast-danger {

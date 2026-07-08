@@ -119,14 +119,14 @@ export default function Login() {
           )}
           <div className="form-group">
             <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Identificador (Usuario / ID de Tutor)
+              Usuario o Correo Electrónico
             </label>
             <input
               type="text"
               className="form-control"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="ej. director, tutor_mama_123..."
+              placeholder="Ingrese su usuario o correo electrónico"
               required
             />
           </div>

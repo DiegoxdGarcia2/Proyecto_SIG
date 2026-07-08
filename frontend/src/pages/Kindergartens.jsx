@@ -136,7 +136,25 @@ export default function Kindergartens() {
   };
 
   return (
-    <div className="page-container" style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.5rem', height: 'calc(100vh - 70px)', overflow: 'hidden', padding: '1.5rem' }}>
+    <div id="kindergartens-page-container" className="page-container" style={{ flex: 1, gap: '1.5rem', overflow: 'hidden' }}>
+      <style>{`
+        #kindergartens-page-container {
+          display: grid;
+          grid-template-columns: 1fr 360px;
+          height: calc(100vh - 70px);
+          padding: 1.5rem;
+        }
+        @media (max-width: 768px) {
+          #kindergartens-page-container {
+            grid-template-columns: 1fr !important;
+            grid-template-rows: 350px auto !important;
+            height: auto !important;
+            overflow-y: auto !important;
+            padding: 1rem !important;
+            gap: 1rem !important;
+          }
+        }
+      `}</style>
       
       {/* Mapa interactivo */}
       <div className="glass-panel" style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>

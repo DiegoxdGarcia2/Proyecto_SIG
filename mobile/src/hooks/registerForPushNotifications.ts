@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
+import { getApiUrl } from "../utils/api";
 
 // Configurar cómo se comportan las notificaciones cuando la app está activa
 Notifications.setNotificationHandler({
@@ -46,7 +47,7 @@ export async function registerForPushNotificationsAsync(tutorId: string): Promis
     const token = tokenData.data;
 
     // Enviar el token al backend FastAPI
-    const response = await fetch("http://10.0.2.2:8000/api/v1/tutors/register-fcm", {
+    const response = await fetch(getApiUrl("/tutors/register-fcm"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

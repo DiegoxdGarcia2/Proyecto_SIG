@@ -49,6 +49,24 @@ export default function Logs() {
 
   return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          #logs-filter-container {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 1rem !important;
+            padding: 1rem !important;
+          }
+          #logs-filter-container > div {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.25rem !important;
+          }
+          #logs-filter-container input {
+            width: 100% !important;
+          }
+        }
+      `}</style>
       
       {/* Cabecera */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -62,7 +80,7 @@ export default function Logs() {
       </div>
 
       {/* Controles de Filtros por Fechas */}
-      <div className="glass-panel animate-fade-in" style={{ padding: '1rem 1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)' }}>
+      <div id="logs-filter-container" className="glass-panel animate-fade-in" style={{ padding: '1rem 1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Fecha Inicio:</span>
           <input 
@@ -97,7 +115,7 @@ export default function Logs() {
       </div>
 
       {/* Tabla de Resultados */}
-      <div className="glass-panel table-container" style={{ borderRadius: '12px', overflow: 'hidden' }}>
+      <div className="glass-panel table-container" style={{ borderRadius: '12px', overflow: 'hidden', overflowX: 'auto', width: '100%' }}>
         <table className="custom-table">
           <thead>
             <tr>

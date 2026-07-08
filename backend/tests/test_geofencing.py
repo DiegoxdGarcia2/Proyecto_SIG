@@ -103,4 +103,4 @@ def test_invalid_kindergarten_unclosed():
     }
     with pytest.raises(ValidationError) as exc_info:
         KindergartenCreate(**data)
-    assert "primer y el último punto del anillo deben ser idénticos" in str(exc_info.value)
+    assert "El polígono debe ser cerrado (el primer punto debe ser igual al último)" in str(exc_info.value)

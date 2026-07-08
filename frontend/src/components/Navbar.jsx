@@ -102,7 +102,7 @@ export default function Navbar() {
               right: '0px',
               width: '320px',
               maxHeight: '400px',
-              zIndex: 1001,
+              zIndex: 9999, // Incrementado para quedar por encima de los mapas Leaflet
               display: 'flex',
               flexDirection: 'column',
               padding: '1rem',

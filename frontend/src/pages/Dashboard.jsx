@@ -16,7 +16,7 @@ function MapRecenter({ coords }) {
 }
 
 export default function Dashboard() {
-  const { companyId, theme, role, kindergartenId, classroomId, username } = useContext(AuthContext);
+  const { token, companyId, theme, role, kindergartenId, classroomId, username } = useContext(AuthContext);
   const [kindergartens, setKindergartens] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
   const [children, setChildren] = useState({});
@@ -30,17 +30,25 @@ export default function Dashboard() {
   // 1. Cargar Kínders, Aulas, Niños y Logs iniciales
   useEffect(() => {
     const fetchData = async () => {
+      const savedToken = token || localStorage.getItem('admin_token');
+      if (!savedToken) return;
+
       try {
+        // Asegurar que las cabeceras de Axios tengan el token al refrescar con F5
+        const config = {
+          headers: { Authorization: `Bearer ${savedToken}` }
+        };
+
         const [kRes, clRes] = await Promise.all([
-          axios.get('/kindergartens'),
-          axios.get('/classrooms')
+          axios.get('/kindergartens', config),
+          axios.get('/classrooms', config)
         ]);
         setKindergartens(kRes.data);
         setClassrooms(clRes.data);
         
         // Cargar niños (filtrados automáticamente en backend)
         const childUrl = isTutor ? '/tutor/children' : '/children';
-        const cRes = await axios.get(childUrl);
+        const cRes = await axios.get(childUrl, config);
         const initialChildren = {};
         cRes.data.forEach(c => {
           if (c.device_id) {
@@ -51,7 +59,7 @@ export default function Dashboard() {
 
         // Si es tutor, cargar logs históricos
         if (isTutor) {
-          const lRes = await axios.get('/tutor/logs');
+          const lRes = await axios.get('/tutor/logs', config);
           setTutorLogs(lRes.data);
         }
       } catch (err) {
@@ -59,7 +67,7 @@ export default function Dashboard() {
       }
     };
     fetchData();
-  }, [isTutor]);
+  }, [isTutor, token]);
 
   // 2. Auto-seleccionar el primer hijo si es tutor y no hay selección
   const childrenList = Object.values(children);
@@ -79,37 +87,62 @@ export default function Dashboard() {
     socketRef.current = ws;
 
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.event === 'LOCATION_UPDATE') {
-        setChildren(prev => {
-          const child = prev[data.device_id];
-          if (!child) return prev;
-          return {
-            ...prev,
-            [data.device_id]: {
-              ...child,
-              status: data.status,
-              last_updated: data.timestamp,
-              current_location: data.location
+      try {
+        const data = JSON.parse(event.data);
+        console.log("WebSocket recibido en Dashboard:", data);
+
+        // Aceptar actualizaciones de ubicación directas (LOCATION_UPDATE)
+        // y alertas del backend (ALERT o INFO con el evento GEOFENCE_EXIT o GEOFENCE_ENTER)
+        const isLocationEvent = data.event === 'LOCATION_UPDATE';
+        const isAlertOrInfo = data.type === 'ALERT' || data.type === 'INFO';
+
+        if (isLocationEvent || isAlertOrInfo) {
+          // Buscar al niño por device_id en el diccionario
+          // Si el mensaje viene del backend como alerta, la estructura tiene data.child_id
+          setChildren(prev => {
+            let targetDeviceId = data.device_id;
+            
+            // Si el WS mandó child_id en vez de device_id, buscamos el dispositivo correspondiente
+            if (!targetDeviceId && data.child_id) {
+              const matched = Object.values(prev).find(c => c.id === data.child_id || c._id === data.child_id);
+              if (matched) targetDeviceId = matched.device_id;
             }
-          };
-        });
 
-        // Si es alarma, agregar a la lista de alertas
-        if (data.status === 'ALARM') {
-          const newAlert = {
-            id: Date.now(),
-            childName: data.child_name,
-            timestamp: new Date(data.timestamp).toLocaleTimeString(),
-            message: `¡El estudiante '${data.child_name}' ha cruzado el perímetro de seguridad!`
-          };
-          setAlerts(prev => [newAlert, ...prev].slice(0, 10));
+            if (!targetDeviceId || !prev[targetDeviceId]) return prev;
+            
+            const child = prev[targetDeviceId];
+            const newLocation = data.location || child.current_location;
+            const newStatus = data.type === 'ALERT' ? 'ALARM' : (data.type === 'INFO' ? 'SAFE' : (data.status || child.status));
 
-          // Si es tutor, refrescar logs históricos para reflejarlo
-          if (isTutor) {
-            axios.get('/tutor/logs').then(res => setTutorLogs(res.data)).catch(console.error);
+            return {
+              ...prev,
+              [targetDeviceId]: {
+                ...child,
+                status: newStatus,
+                last_updated: data.timestamp || new Date().toISOString(),
+                current_location: newLocation
+              }
+            };
+          });
+
+          // Si es alerta de salida (ALERT) o evento de alarma
+          if (data.type === 'ALERT' || data.status === 'ALARM') {
+            const childName = data.child_name || "Estudiante";
+            const newAlert = {
+              id: Date.now(),
+              childName: childName,
+              timestamp: new Date(data.timestamp || Date.now()).toLocaleTimeString(),
+              message: data.message || `¡El estudiante '${childName}' ha cruzado el perímetro de seguridad!`
+            };
+            setAlerts(prev => [newAlert, ...prev].slice(0, 10));
+
+            if (isTutor) {
+              axios.get('/tutor/logs').then(res => setTutorLogs(res.data)).catch(console.error);
+            }
           }
         }
+      } catch (err) {
+        console.error("Error al procesar mensaje de WebSocket en Dashboard:", err);
       }
     };
 
