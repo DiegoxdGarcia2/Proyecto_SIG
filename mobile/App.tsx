@@ -11,6 +11,7 @@ import { getApiUrl } from "./src/utils/api";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { ChildSelectorScreen } from "./src/screens/ChildSelectorScreen";
 import { TrackingScreen } from "./src/screens/TrackingScreen";
+import { SimulatorScreen } from "./src/screens/SimulatorScreen";
 import { AlertBanner } from "./src/components/AlertBanner";
 
 // Coordenadas del Kindergarten Piloto UAGRM (Latitud, Longitud)
@@ -236,8 +237,8 @@ function AppContent() {
             </View>
           </View>
         ) : (
-          // El profesor o admin ven directamente la pantalla de GPS Real/Historial en web view
-          <TrackingScreen onBackToSelector={logout} />
+          // El profesor o admin ven directamente el simulador para hacer pruebas de notificaciones y geofencing
+          <SimulatorScreen onBackToSelector={logout} />
         )}
       </View>
     </SafeAreaView>

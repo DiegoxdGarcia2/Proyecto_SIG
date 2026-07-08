@@ -18,11 +18,11 @@ interface LogEntry {
 }
 
 /**
- * Pantalla de simulación GPS para entorno web.
+ * Pantalla de simulación GPS interactiva para probar el geofencing.
  * Envía coordenadas reales al backend para probar el análisis espacial
  * y la cadena de notificaciones WebSocket a todos los roles.
  */
-export const TrackingScreen: React.FC<{ onBackToSelector: () => void }> = ({
+export const SimulatorScreen: React.FC<{ onBackToSelector: () => void }> = ({
   onBackToSelector,
 }) => {
   const { selectedChild, username, logout } = useAuth();
