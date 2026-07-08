@@ -32,6 +32,13 @@ export const TrackingScreen: React.FC<{ onBackToSelector: () => void }> = ({
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logIdRef = useRef(0);
 
+  // Si no hay un niño seleccionado (flujo administrador), asignamos por defecto a Juanito Pérez
+  const activeChild = selectedChild || {
+    id: "6a4dc2e5b2a679848e2eb3d2",
+    name: "Juanito Pérez",
+    deviceId: "dispositivo_juanito_123"
+  };
+
   const addLog = useCallback(
     (message: string, type: LogEntry["type"] = "info") => {
       logIdRef.current += 1;
@@ -50,7 +57,7 @@ export const TrackingScreen: React.FC<{ onBackToSelector: () => void }> = ({
    * Envía una posición al endpoint /tracking/update del backend.
    */
   const sendPosition = async (lat: number, lng: number, label: string) => {
-    if (!selectedChild) return;
+    if (!activeChild) return;
     setIsSending(true);
     setLastCoords({ lat, lng });
     addLog(`📡 Enviando posición ${label}: [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
@@ -60,7 +67,7 @@ export const TrackingScreen: React.FC<{ onBackToSelector: () => void }> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          device_id: selectedChild.deviceId,
+          device_id: activeChild.deviceId,
           tutor_id: username || "web_simulator",
           location: {
             type: "Point",
@@ -75,12 +82,12 @@ export const TrackingScreen: React.FC<{ onBackToSelector: () => void }> = ({
 
         if (data.status === "OUTSIDE") {
           addLog(
-            `🚨 ¡ALERTA! ${selectedChild.name} FUERA de la geocerca. El backend notificó a tutores, profesores y admins.`,
+            `🚨 ¡ALERTA! ${activeChild.name} FUERA de la geocerca. El backend notificó a tutores, profesores y admins.`,
             "error",
           );
         } else {
           addLog(
-            `✅ ${selectedChild.name} está SEGURO dentro de la geocerca.`,
+            `✅ ${activeChild.name} está SEGURO dentro de la geocerca.`,
             "success",
           );
         }
@@ -121,9 +128,9 @@ export const TrackingScreen: React.FC<{ onBackToSelector: () => void }> = ({
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Header con info del niño */}
         <View style={styles.card}>
-          <Text style={styles.title}>🛰️ Simulador GPS: {selectedChild?.name}</Text>
+          <Text style={styles.title}>🛰️ Simulador GPS: {activeChild?.name}</Text>
           <Text style={styles.subtitle}>
-            Dispositivo: {selectedChild?.deviceId}
+            Dispositivo: {activeChild?.deviceId}
           </Text>
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>Estado actual:</Text>

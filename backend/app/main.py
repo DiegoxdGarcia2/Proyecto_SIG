@@ -31,7 +31,11 @@ app = FastAPI(
 # Configuración de CORS para permitir peticiones desde el frontend en React Vite
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, definir los dominios permitidos
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:8081",
+        "https://frontend-6161081745.us-central1.run.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

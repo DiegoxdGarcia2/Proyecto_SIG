@@ -50,7 +50,7 @@ export const MapViewContainer: React.FC<Props> = ({ lastAlert, status }) => {
 const styles = StyleSheet.create({
     mapWrapper: {
         width: "90%",
-        height: "65%",
+        height: "50%",
         borderRadius: 16,
         overflow: "hidden",
         shadowColor: "#000",

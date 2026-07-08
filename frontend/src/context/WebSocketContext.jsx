@@ -18,10 +18,12 @@ export const WebSocketProvider = ({ children }) => {
 
     let wsUrl = '';
     // Dependiendo del rol, nos conectamos al endpoint adecuado
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const wsBase = isLocal ? 'ws://localhost:8000' : 'wss://backend-6161081745.us-central1.run.app';
     if (role === 'tutor') {
-      wsUrl = `ws://localhost:8000/api/v1/ws/tutor/${username}`; // username is used as tutor_id for mock
+      wsUrl = `${wsBase}/api/v1/ws/tutor/${username}`;
     } else {
-      wsUrl = `ws://localhost:8000/api/v1/ws/admin/${companyId}`;
+      wsUrl = `${wsBase}/api/v1/ws/admin/${companyId}`;
     }
 
     const ws = new WebSocket(wsUrl);

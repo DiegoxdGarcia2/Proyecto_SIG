@@ -79,9 +79,11 @@ export default function Dashboard() {
 
   // 3. Configurar WebSocket para tiempo real
   useEffect(() => {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const wsBase = isLocal ? 'ws://localhost:8000' : 'wss://backend-6161081745.us-central1.run.app';
     const wsUrl = isTutor
-      ? `ws://localhost:8000/api/v1/ws/tutor/${username}`
-      : `ws://localhost:8000/api/v1/ws/admin/${companyId}${role === 'director' ? `?kindergarten_id=${kindergartenId}` : ''}${role === 'teacher' ? `?classroom_id=${classroomId}` : ''}`;
+      ? `${wsBase}/api/v1/ws/tutor/${username}`
+      : `${wsBase}/api/v1/ws/admin/${companyId}${role === 'director' ? `?kindergarten_id=${kindergartenId}` : ''}${role === 'teacher' ? `?classroom_id=${classroomId}` : ''}`;
     
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;

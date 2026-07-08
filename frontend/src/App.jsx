@@ -28,8 +28,10 @@ export default function App() {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Configurar baseURL global para Axios
-  axios.defaults.baseURL = 'http://localhost:8000/api/v1';
+  // Configurar baseURL global para Axios dinámicamente (producción vs local)
+  axios.defaults.baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000/api/v1'
+    : 'https://backend-6161081745.us-central1.run.app/api/v1';
 
   // Aplicar tema guardado al iniciar o cambiar
   useEffect(() => {

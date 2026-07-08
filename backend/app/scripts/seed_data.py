@@ -20,7 +20,7 @@ def load_env_manual(file_path=".env"):
 
 def run_seed():
     """Limpia los datos previos e inserta los datos de prueba del Kindergarten piloto, tutores, niños y admins/profesor."""
-    mongo_uri = os.getenv("MONGO_URI") or "mongodb://localhost:27017"
+    mongo_uri = os.getenv("MONGODB_URI") or os.getenv("MONGO_URI") or "mongodb://localhost:27017"
     db_name = os.getenv("MONGODB_DB_NAME") or "proyecto_sig_db"
     
     print(f"Conectando a MongoDB: {mongo_uri.split('@')[-1]}... DB: {db_name}")
@@ -171,7 +171,8 @@ def run_seed():
     print("¡Poblamiento de base de datos finalizado con éxito!")
 
 def main():
-    load_env_manual()
+    if not os.getenv("MONGODB_URI"):
+        load_env_manual()
     run_seed()
 
 if __name__ == "__main__":
